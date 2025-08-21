@@ -118,7 +118,7 @@ class Kernel(abc.ABC):
             x = gen.normal(size=(n, self.dim))
             r0 = np.sqrt(np.sum(x*x, axis=1))
 
-            out = np.zeros(len(r), self.dim)
+            out = np.zeros((len(r), self.dim))
             for i in range(out.shape[1]):
                 out[:,i] = r/r0*x[:,i]
 
@@ -163,7 +163,8 @@ class KDESampler(object):
     of variable mass. This smooth density field can be sampled efficiently.
     """
     def __init__(self, kernel, k, x, m,
-        method="split", gen=random.default_rng()):
+                 method="split", gen=random.default_rng(),
+                 boxsize=None):
         """
         kernel - the KDE kernel, must be an instance of
         k - number of neighbors to smooth over
@@ -174,6 +175,7 @@ class KDESampler(object):
         radius to the kth-nearest neighbot with exactly the same mass as the
         particle.
         gen - the RNG, must be a numpy.random.Generator
+        boxsize - the size of the periodic box, if non-periodic, set to None
         """
         # Could be extended so that secondary star particle properties
         # are passed to __init__ and are sampled via per-particle
@@ -201,7 +203,7 @@ class KDESampler(object):
         # This could be exteneded to compute covariance matrices at each
         # point.
         if method == "standard":
-            tree = spatial.KDTree(x)
+            tree = spatial.KDTree(x, boxsize=boxsize)
             self.r = tree.query(x, k+1)[0][:,k]
         elif method == "split":
             self.r = np.zeros(len(x))
@@ -209,7 +211,7 @@ class KDESampler(object):
             for i in range(len(self.mass_bins)):
                 xi = self.x[self.starts[i]: self.ends[i]]
 
-                tree = spatial.KDTree(xi)
+                tree = spatial.KDTree(xi, boxsize=boxsize)
                 self.r[self.starts[i]: self.ends[i]] = tree.query(
                     xi, k+1)[0][:,k]
         elif method == "mass":
